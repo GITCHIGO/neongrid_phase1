@@ -1,0 +1,244 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+<title>Neon Grind</title>
+<link href="https://fonts.googleapis.com/css2?family=Share+Tech+Mono&family=Orbitron:wght@400;700&display=swap" rel="stylesheet">
+<style>
+  * { box-sizing: border-box; margin: 0; padding: 0; -webkit-tap-highlight-color: transparent; }
+  body { background: #05050f; font-family: 'Share Tech Mono', monospace; color: #00ffe5; min-height: 100vh; overflow-x: hidden; }
+  #scanline { position: fixed; top: 0; left: 0; right: 0; bottom: 0; background: repeating-linear-gradient(0deg, rgba(0,255,229,0.03) 0px, rgba(0,255,229,0.03) 1px, transparent 1px, transparent 4px); pointer-events: none; z-index: 0; }
+  #glitch { position: fixed; top: 0; left: 0; right: 0; bottom: 0; pointer-events: none; z-index: 99; opacity: 0; background: rgba(255,45,120,0.04); transition: opacity 0.05s; }
+  #glitch.active { opacity: 1; }
+  #game { position: relative; z-index: 1; max-width: 480px; margin: 0 auto; padding: 12px; }
+
+  #header { text-align: center; padding: 16px 0 10px; border-bottom: 1px solid #00ffe522; margin-bottom: 12px; }
+  #title { font-family: 'Orbitron', monospace; font-size: 26px; color: #ff2d78; font-weight: 700; letter-spacing: 5px; }
+  #subtitle { font-size: 10px; color: #00ffe555; letter-spacing: 4px; margin-top: 4px; }
+
+  #stats { display: grid; grid-template-columns: 1fr 1fr 1fr; gap: 8px; margin-bottom: 14px; }
+  .stat { background: #0a0a1e; border: 1px solid #00ffe522; border-radius: 4px; padding: 8px; text-align: center; }
+  .stat-val { font-size: 18px; color: #00ffe5; font-weight: 700; }
+  .stat-lbl { font-size: 9px; color: #00ffe555; letter-spacing: 1px; margin-top: 3px; }
+
+  #clickzone { text-align: center; margin: 10px 0; position: relative; }
+  #hackbtn {
+    background: #05050f;
+    border: 2px solid #ff2d78;
+    color: #ff2d78;
+    font-family: 'Orbitron', monospace;
+    font-size: 22px;
+    font-weight: 700;
+    letter-spacing: 5px;
+    padding: 22px 0;
+    border-radius: 4px;
+    cursor: pointer;
+    width: 100%;
+    max-width: 360px;
+    position: relative;
+    transition: background 0.1s, transform 0.08s;
+    user-select: none;
+  }
+  #hackbtn:active { transform: scale(0.95); background: #ff2d7822; }
+
+  #popups { position: absolute; top: 0; left: 0; right: 0; bottom: 0; pointer-events: none; overflow: hidden; }
+  .popup {
+    position: absolute;
+    font-size: 18px;
+    font-weight: 700;
+    pointer-events: none;
+    animation: floatup 0.9s ease-out forwards;
+  }
+  @keyframes floatup {
+    0%   { opacity: 1; transform: translateY(0); }
+    100% { opacity: 0; transform: translateY(-80px); }
+  }
+
+  #upgrades { border-top: 1px solid #00ffe522; padding-top: 12px; margin-top: 8px; }
+  .upg-title { font-size: 10px; color: #ff2d7888; letter-spacing: 4px; margin-bottom: 10px; }
+
+  .upg {
+    display: flex;
+    align-items: center;
+    gap: 10px;
+    background: #0a0a1e;
+    border: 1px solid #00ffe522;
+    border-radius: 4px;
+    padding: 10px 12px;
+    margin-bottom: 8px;
+    cursor: pointer;
+    transition: border-color 0.15s, background 0.15s;
+    -webkit-tap-highlight-color: transparent;
+  }
+  .upg.unlocked:active { background: #00ffe508; border-color: #00ffe5; }
+  .upg.locked { opacity: 0.35; cursor: not-allowed; }
+
+  .upg-icon {
+    width: 42px;
+    height: 42px;
+    border-radius: 4px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    font-size: 18px;
+    font-weight: 700;
+    flex-shrink: 0;
+    font-family: 'Orbitron', monospace;
+  }
+  .upg-info { flex: 1; min-width: 0; }
+  .upg-name { font-size: 13px; color: #00ffe5; }
+  .upg-desc { font-size: 10px; color: #00ffe566; margin-top: 2px; }
+  .upg-owned { font-size: 10px; color: #ff2d78; margin-top: 2px; }
+  .upg-cost { font-size: 13px; color: #ffd700; text-align: right; flex-shrink: 0; white-space: nowrap; }
+
+  #footer { text-align: center; padding: 20px 0 10px; font-size: 9px; color: #00ffe522; letter-spacing: 2px; }
+</style>
+</head>
+<body>
+<div id="scanline"></div>
+<div id="glitch"></div>
+<div id="game">
+  <div id="header">
+    <div id="title">NEON GRIND</div>
+    <div id="subtitle">HACK THE MEGACORP</div>
+  </div>
+
+  <div id="stats">
+    <div class="stat"><div class="stat-val" id="s-credits">0</div><div class="stat-lbl">CREDITS</div></div>
+    <div class="stat"><div class="stat-val" id="s-cps">0</div><div class="stat-lbl">PER SEC</div></div>
+    <div class="stat"><div class="stat-val" id="s-cpc">1</div><div class="stat-lbl">PER CLICK</div></div>
+  </div>
+
+  <div id="clickzone">
+    <button id="hackbtn">[ HACK ]</button>
+    <div id="popups"></div>
+  </div>
+
+  <div id="upgrades">
+    <div class="upg-title">// UPGRADES</div>
+    <div id="upg-list"></div>
+  </div>
+
+  <div id="footer">NEON GRIND v1.0 // STAY UNDERGROUND</div>
+</div>
+
+<script>
+var state = {
+  credits: 0,
+  cpc: 1,
+  cps: 0,
+  upgrades: [
+    {id:0, name:'Netrunner',    desc:'+1 cred/click',   cost:10,   owned:0, type:'click',   val:1,  mult:1.15, icon:'N', color:'#00ffe5'},
+    {id:1, name:'Scout Drone',  desc:'+0.5 cred/sec',   cost:25,   owned:0, type:'passive', val:0.5,mult:1.15, icon:'D', color:'#ff2d78'},
+    {id:2, name:'Hack Rig',     desc:'+3 cred/click',   cost:100,  owned:0, type:'click',   val:3,  mult:1.15, icon:'R', color:'#9d4edd'},
+    {id:3, name:'Data Farm',    desc:'+5 cred/sec',     cost:250,  owned:0, type:'passive', val:5,  mult:1.15, icon:'F', color:'#00ff88'},
+    {id:4, name:'Rogue AI',     desc:'+25 cred/sec',    cost:1000, owned:0, type:'passive', val:25, mult:1.15, icon:'A', color:'#ffd700'},
+    {id:5, name:'Megacorp Hack',desc:'+20 cred/click',  cost:2000, owned:0, type:'click',   val:20, mult:1.15, icon:'M', color:'#ff6b35'},
+    {id:6, name:'Ghost Protocol',desc:'+100 cred/sec',  cost:8000, owned:0, type:'passive', val:100,mult:1.15, icon:'G', color:'#00cfff'},
+    {id:7, name:'Neural Splice', desc:'+50 cred/click', cost:15000,owned:0, type:'click',   val:50, mult:1.15, icon:'X', color:'#ff2d78'},
+  ]
+};
+
+function fmt(n) {
+  n = Math.floor(n);
+  if (n >= 1e9) return (n/1e9).toFixed(1) + 'B';
+  if (n >= 1e6) return (n/1e6).toFixed(1) + 'M';
+  if (n >= 1e3) return (n/1e3).toFixed(1) + 'K';
+  return '' + n;
+}
+
+function updateUI() {
+  document.getElementById('s-credits').textContent = fmt(state.credits);
+  document.getElementById('s-cps').textContent = fmt(state.cps);
+  document.getElementById('s-cpc').textContent = fmt(state.cpc);
+  state.upgrades.forEach(function(u) {
+    var el = document.getElementById('upg-' + u.id);
+    if (!el) return;
+    el.querySelector('.upg-cost').textContent = '\u20B3' + fmt(u.cost);
+    el.querySelector('.upg-owned').textContent = 'owned: ' + u.owned;
+    if (state.credits >= u.cost) {
+      el.classList.remove('locked');
+      el.classList.add('unlocked');
+    } else {
+      el.classList.add('locked');
+      el.classList.remove('unlocked');
+    }
+  });
+}
+
+function buildUpgrades() {
+  var list = document.getElementById('upg-list');
+  state.upgrades.forEach(function(u) {
+    var div = document.createElement('div');
+    div.className = 'upg locked';
+    div.id = 'upg-' + u.id;
+    div.innerHTML =
+      '<div class="upg-icon" style="background:' + u.color + '22;color:' + u.color + ';border:1px solid ' + u.color + '44">' + u.icon + '</div>' +
+      '<div class="upg-info">' +
+        '<div class="upg-name">' + u.name + '</div>' +
+        '<div class="upg-desc">' + u.desc + '</div>' +
+        '<div class="upg-owned">owned: 0</div>' +
+      '</div>' +
+      '<div class="upg-cost">\u20B3' + fmt(u.cost) + '</div>';
+    div.addEventListener('click', function() {
+      if (state.credits >= u.cost) {
+        state.credits -= u.cost;
+        u.cost = Math.floor(u.cost * u.mult);
+        u.owned++;
+        if (u.type === 'click') state.cpc += u.val;
+        else state.cps += u.val;
+        updateUI();
+        triggerGlitch();
+      }
+    });
+    list.appendChild(div);
+  });
+}
+
+function spawnPopup() {
+  var container = document.getElementById('popups');
+  var lbl = document.createElement('div');
+  lbl.className = 'popup';
+  lbl.textContent = '+' + fmt(state.cpc);
+  lbl.style.left = Math.floor(Math.random() * 200 + 60) + 'px';
+  lbl.style.top = Math.floor(Math.random() * 20 + 5) + 'px';
+  lbl.style.color = Math.random() > 0.5 ? '#00ffe5' : '#ff2d78';
+  container.appendChild(lbl);
+  setTimeout(function() { lbl.remove(); }, 900);
+}
+
+document.getElementById('hackbtn').addEventListener('click', function() {
+  state.credits += state.cpc;
+  spawnPopup();
+  updateUI();
+});
+
+function triggerGlitch() {
+  var g = document.getElementById('glitch');
+  var game = document.getElementById('game');
+  g.classList.add('active');
+  game.style.transform = 'translate(' + (Math.random()*6-3) + 'px,' + (Math.random()*4-2) + 'px)';
+  setTimeout(function() {
+    g.classList.remove('active');
+    game.style.transform = 'translate(' + (Math.random()*4-2) + 'px,0)';
+    setTimeout(function() { game.style.transform = ''; }, 80);
+  }, 60);
+}
+
+setInterval(function() {
+  if (state.cps > 0) {
+    state.credits += state.cps * 0.1;
+    updateUI();
+  }
+}, 100);
+
+setInterval(function() {
+  triggerGlitch();
+}, Math.floor(Math.random() * 6000 + 5000));
+
+buildUpgrades();
+updateUI();
+</script>
+</body>
+</html>
